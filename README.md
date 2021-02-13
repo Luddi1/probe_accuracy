@@ -104,48 +104,56 @@ each `PROBE_ACCURACY`.  This is intended to allow the probe to cool away from th
 while still measuring probe accuracy.
 
 
+
 Mesh Bed Testing
 ======================
-
+Thanks to @alch3my for inspiration and some code parts.
 
 Installation
 ------------
+As above include the `probe_accuracy/test_probe_accuracy.cfg` in your klipper configuration. Also [[bed_mesh]](https://github.com/KevinOConnor/klipper/blob/master/docs/Bed_Mesh.md#basic-configuration) has to be defined in the configuration.
 
-Either
-
-    sudo apt install python3-numpy python3-matplotlib
-
-or
-
+Install the following dependencies.
+To use the python environment approach issue
+    
     sudo apt-get install libatlas-base-dev
     /home/pi/plotly-env/bin/pip install -U numpy matplotlib
 
-For .gif creation
-`sudo apt install imagemagick`
+Or use the system wide installation
+    
+    sudo apt install python3-numpy python3-matplotlib
+
+For .gif creation you also need
+
+    sudo apt install imagemagick
 
 Test Execution
 --------------
-
-`[bed_mesh]` has to be defined in klipper. 
-The test_probe_accuracy.cfg assumes you have `G32` for Homing and QGL defined. 
-G32 can be commented out if you want to stay with the initial QGL during test.
-
-First start either
-
-    python3 bed_mesh.py
-
-or 
+ 
+The same logic as above applies. Home and level your printer (G32 on a [VORON 2](https://vorondesign.com)).
+Then start either
 
     /home/pi/plotly-env/bin/python3 bed_mesh.py
 
-then issue in klipper (adjust to your liking):
+or with the system wide installation
 
-    TEST_PROBE_ACCURACY START_IDLE_MINUTES=1 END_IDLE_MINUTES=1 BED_TEMP=35 EXTRUDER_TEMP=30 BED_SOAK_MINUTES=1 EXTRUDER_SOAK_MINUTES=1 BED_MESH=1
+    python3 bed_mesh.py
 
-gif creation with
+Then issue in klipper console (adjust to your liking):
 
-    convert -delay 30 /tmp/mesh_*png /tmp/meshes.gif
+    TEST_PROBE_ACCURACY START_IDLE_MINUTES=1 END_IDLE_MINUTES=1 BED_TEMP=105 EXTRUDER_TEMP=30 BED_SOAK_MINUTES=1 EXTRUDER_SOAK_MINUTES=1 BED_MESH=1
 
-Currently you need to remove the old mesh images first.
+START_IDLE_MINUTES=0 and END_IDLE_MINUTES=0 does not work. Keep the session open during the test (see above for more). At the end .png files are created from the plots and placed in `/tmp/`.
+
+For a .gif creation issue
+
+    convert -delay 25 /tmp/mesh_*.png /tmp/meshes.gif
+
+Currently you need to remove the old mesh images before you run another test:
 
     rm /tmp/mesh_*.png
+
+Things to try out
+--------------
+ * Include a `G32` before each `BED_MESH_CALIBRATE` to relevel the gantry and reflect the actual state the printer will be in when printing after heat soak.
+ * Remove the `relative_reference_index:` in [bed_mesh]. This might show the upwards tendency of the print head in the case of e.g. a Voron 2. See [Z-Axis Frame Thermal Expansion Compensation](https://github.com/alchemyEngine/klipper/tree/work-frame-expansion-20210130#z-axis-frame-thermal-expansion-compensation) for more. 

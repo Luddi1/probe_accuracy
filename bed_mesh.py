@@ -1,19 +1,17 @@
 # Create a Python environment for this script.  Use ssh to log in to the pi, and run the following:
 #
-#     sudo apt install python3-venv
+#     sudo apt install python3-venv libatlas-base-dev
 #     python3 -m venv /home/pi/plotly-env
-#     /home/pi/plotly-env/bin/pip install -U plotly
+#     /home/pi/plotly-env/bin/pip install -U numpy matplotlib
 #     mkdir /home/pi/probe_accuracy
 #
-# Download probe_accuracy.py and copy it to the pi into /home/pi/probe_accuracy/ .
+# Download bed_mesh.py and copy it to the pi into /home/pi/probe_accuracy/ .
 #
 # To collect data, ssh into the pi and run the below command before doing TEST_PROBE_ACCURACY:
 #
-#     /home/pi/plotly-env/bin/python3 /home/pi/probe_accuracy/probe_accuracy.py
+#     /home/pi/plotly-env/bin/python3 /home/pi/probe_accuracy/bed_mesh.py
 #
-# Leave that ssh session/window open for the duration of the test.  After the test completes, the
-# chart should be in /tmp/probe_accuracy.html. Copy that file from the pi to your local machine
-# and open it.
+# Leave that ssh session/window open for the duration of the test.  
 #
 # If you specify --plot-only the script will not collect data from Klipper, but instead plot an
 # existing JSON data file pointed to by --data-file.
@@ -30,6 +28,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import LinearLocator
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import style
+style.use("dark_background")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--klippy-uds', default='/tmp/klippy_uds')
@@ -163,7 +163,7 @@ def plot_mesh(mesh, z_min = -1.01, z_max = 1.01, ts = 0, temp = None):
     surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
     
     # Customize the z axis.
-    ax.set_zlim(z_min, z_max)
+    ax.set_zlim(1.2*z_min, 1.2*z_max)
     ax.zaxis.set_major_locator(LinearLocator(10))
     ax.zaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter('{x:.02f}'))
 
@@ -180,10 +180,9 @@ def plot_mesh(mesh, z_min = -1.01, z_max = 1.01, ts = 0, temp = None):
     plt.title(titlestr)
     
     plt.tight_layout()
-    filename='/tmp/mesh_'+str(int(ts))+'_seconds.png'
+    filename='/tmp/mesh_{0:06d}_seconds.png'.format(int(ts))
     plt.savefig(filename, dpi=96)
     plt.gca()
-    #plt.show()
 
 
 def draw_meshes(data):
@@ -200,7 +199,7 @@ def draw_meshes(data):
                 zmin = local_min 
             if local_max > zmax:
                 zmax = local_max 
-    
+
     for m in data:
         if 'btemp' in m:            # is temp output
             latest_temp = m 
