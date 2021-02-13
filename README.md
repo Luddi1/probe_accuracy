@@ -102,3 +102,50 @@ each `PROBE_ACCURACY`.  This is intended to allow the probe to cool away from th
 
 `END_IDLE_MINUTES` is the amount of time the test will wait after turning off the heaters at the end,
 while still measuring probe accuracy.
+
+
+Mesh Bed Testing
+======================
+
+
+Installation
+------------
+
+Either
+
+    sudo apt install python3-numpy python3-matplotlib
+
+or
+
+    sudo apt-get install libatlas-base-dev
+    /home/pi/plotly-env/bin/pip install -U numpy matplotlib
+
+For .gif creation
+`sudo apt install imagemagick`
+
+Test Execution
+--------------
+
+`[bed_mesh]` has to be defined in klipper. 
+The test_probe_accuracy.cfg assumes you have `G32` for Homing and QGL defined. 
+G32 can be commented out if you want to stay with the initial QGL during test.
+
+First start either
+
+    python3 bed_mesh.py
+
+or 
+
+    /home/pi/plotly-env/bin/python3 bed_mesh.py
+
+then issue in klipper (adjust to your liking):
+
+    TEST_PROBE_ACCURACY START_IDLE_MINUTES=1 END_IDLE_MINUTES=1 BED_TEMP=35 EXTRUDER_TEMP=30 BED_SOAK_MINUTES=1 EXTRUDER_SOAK_MINUTES=1 BED_MESH=1
+
+gif creation with
+
+    convert -delay 30 /tmp/mesh_*png /tmp/meshes.gif
+
+Currently you need to remove the old mesh images first.
+
+    rm /tmp/mesh_*.png

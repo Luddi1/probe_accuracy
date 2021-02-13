@@ -24,7 +24,12 @@ import re
 import socket
 import time
 
-import numpy as np, matplotlib
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.ticker import LinearLocator
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--klippy-uds', default='/tmp/klippy_uds')
@@ -132,6 +137,77 @@ def load_data(data_file: str) -> list:
         return [json.loads(line) for line in f]
 
 
+def parse_mesh(mesh):
+    if all([x in mesh.keys() for x in ['mesh_min', 'mesh_max', 'z_positions']]):
+        mesh_min = mesh['mesh_min']
+        mesh_max = mesh['mesh_max']
+        z_positions = mesh['z_positions']
+        
+        n_y_points = len(z_positions)
+        n_x_points = len(z_positions[0])
+        
+        x_coords = np.linspace(mesh_min[0], mesh_max[0], n_x_points, float)
+        y_coords = np.linspace(mesh_min[1], mesh_max[1], n_y_points, float)
+        mesh_points = np.array(z_positions, float)
+        
+        return {'x': x_coords, 'y':y_coords, 'mesh':mesh_points}
+
+
+def plot_mesh(mesh, z_min = -1.01, z_max = 1.01, ts = 0, temp = None):
+    z = mesh['mesh']
+    x, y = np.meshgrid(mesh['x'], mesh['y'])
+    
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    
+    # Plot the surface.
+    surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+    
+    # Customize the z axis.
+    ax.set_zlim(z_min, z_max)
+    ax.zaxis.set_major_locator(LinearLocator(10))
+    ax.zaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter('{x:.02f}'))
+
+    # Add a color bar which maps values to colors.
+    fig.colorbar(surf, shrink=0.5, aspect=10, label='z (mm)')
+    
+    plt.xlabel('x (mm)')
+    plt.ylabel('y (mm)')
+    
+    if temp is not None:
+        titlestr = str(int(ts/60))+'min., Bed: '+str(temp['btemp'])+'/'+str(temp['bset'])+'°C, E0: '+str(temp['etemp'])+'/'+str(temp['etemp'])+'°C'
+    else:
+        titlestr = str(int(ts/60))+'min.'
+    plt.title(titlestr)
+    
+    plt.tight_layout()
+    filename='/tmp/mesh_'+str(int(ts))+'_seconds.png'
+    plt.savefig(filename, dpi=96)
+    plt.gca()
+    #plt.show()
+
+
+def draw_meshes(data):
+    latest_temp = None
+    zmin = 0; zmax = 0
+    min_ts = data[0]['ts']
+    
+    # get max and min z over all meshes first
+    for m in data:
+        if 'z_positions' in m:      # is mesh output
+            local_min = np.min(m['z_positions'])
+            local_max = np.max(m['z_positions'])
+            if local_min < zmin:
+                zmin = local_min 
+            if local_max > zmax:
+                zmax = local_max 
+    
+    for m in data:
+        if 'btemp' in m:            # is temp output
+            latest_temp = m 
+        elif 'z_positions' in m:    # is mesh output
+            plot_mesh(parse_mesh(m), z_min = zmin, z_max = zmax, ts = m['ts'] - min_ts, temp = latest_temp)
+
+
 def main():
     args = parser.parse_args()
 
@@ -141,7 +217,7 @@ def main():
         print('Recording data, LEAVE THIS SESSION OPEN UNTIL THE SCRIPT SAYS "DONE"!')
         data = get_data(args.klippy_uds, args.data_file)
 
-    # todo: plot data
+    draw_meshes(data)
     print('DONE')
 
 if __name__ == '__main__':
